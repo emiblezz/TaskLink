@@ -8,15 +8,13 @@ class AppConfig {
   static final AppConfig _instance = AppConfig._privateConstructor();
   factory AppConfig() => _instance;
 
-  // Supabase client getter
+  // Supabase client
   late SupabaseClient _supabaseClient;
   late GoTrueClient _authClient;
 
   // Initialize Supabase
-
   Future<void> initialize() async {
     try {
-      // Try to load the .env file
       await dotenv.load(fileName: ".env");
       print(".env file loaded successfully");
 
@@ -41,15 +39,9 @@ class AppConfig {
     }
   }
 
-  // Get initialized Supabase client
-  SupabaseClient get supabaseClient {
-    return _supabaseClient;
-  }
-
-  // Get auth client
-  GoTrueClient get authClient {
-    return _authClient;
-  }
+  // Instance-level getters
+  SupabaseClient get supabaseClient => _supabaseClient;
+  GoTrueClient get authClient => _authClient;
 
   // App constants
   static const String appName = 'TaskLink';

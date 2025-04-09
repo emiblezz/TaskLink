@@ -7,6 +7,7 @@ import 'package:tasklink/models/user_model.dart';
 import 'package:tasklink/screens/auth/login_screen.dart';
 import 'package:tasklink/screens/job_detail_screen.dart';
 import 'package:tasklink/screens/recruiter/create_job_screen.dart';
+import 'package:tasklink/screens/recruiter/cv_ranking_screen.dart';
 import 'package:tasklink/services/auth_service.dart';
 import 'package:tasklink/services/job_service.dart';
 import 'package:tasklink/services/supabase_service.dart';
@@ -25,6 +26,14 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+  }
+  void _navigateToCVRanking(JobModel job) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CVRankingScreen(job: job),
+      ),
+    ).then((_) => setState(() {})); // Refresh after returning
   }
 
   Future<void> _loadInitialData() async {
@@ -125,6 +134,7 @@ class _DashboardTab extends StatelessWidget {
     final activeJobs = jobs.where((job) => job.status == 'Open').length;
     final closedJobs = jobs.where((job) => job.status == 'Closed').length;
     final totalApplications = 0; // This would require additional API call
+    final rankedApplications = 0; // This would require additional API call
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -174,11 +184,11 @@ class _DashboardTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              const Expanded(
+              Expanded(
                 child: _StatCard(
-                  icon: Icons.check_circle,
-                  title: 'Hired',
-                  value: '0',
+                  icon: Icons.auto_awesome,
+                  title: 'AI Ranked',
+                  value: rankedApplications.toString(),
                   color: Colors.purple,
                 ),
               ),
@@ -472,6 +482,19 @@ class _JobPostingsTabState extends State<_JobPostingsTab> {
                                   ),
                                   const SizedBox(width: 8),
                                   TextButton.icon(
+                                    icon: const Icon(Icons.auto_awesome, size: 16),
+                                    label: const Text('Rank CVs'),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CVRankingScreen(job: job),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton.icon(
                                     icon: const Icon(Icons.visibility, size: 16),
                                     label: const Text('View'),
                                     onPressed: () {
@@ -647,38 +670,91 @@ class _CandidatesTabState extends State<_CandidatesTab> {
             )
                 : _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _applications.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.people_outline,
-                    size: 64,
-                    color: Colors.grey,
+                : Column(
+              children: [
+                // Actions for this job
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CVRankingScreen(job: _selectedJob!),
+                              ),
+                            ).then((_) {
+                              // Refresh applications after returning from ranking screen
+                              if (_selectedJob != null) {
+                                _loadApplications(_selectedJob!.id!);
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.auto_awesome),
+                          label: const Text('AI Ranking'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (_selectedJob != null) {
+                              _loadApplications(_selectedJob!.id!);
+                            }
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Refresh'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No applications yet',
-                    style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                // Applications list
+                Expanded(
+                  child: _applications.isEmpty
+                      ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.people_outline,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No applications yet',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Applications for this job will appear here',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                      : ListView.builder(
+                    itemCount: _applications.length,
+                    itemBuilder: (context, index) {
+                      final application = _applications[index];
+                      return _ApplicationCard(
+                        application: application,
+                        onUpdateStatus: _updateApplicationStatus,
+                      );
+                    },
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Applications for this job will appear here',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-                : ListView.builder(
-              itemCount: _applications.length,
-              itemBuilder: (context, index) {
-                final application = _applications[index];
-                return _ApplicationCard(
-                  application: application,
-                  onUpdateStatus: _updateApplicationStatus,
-                );
-              },
+                ),
+              ],
             ),
           ),
         ],
