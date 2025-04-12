@@ -46,4 +46,6 @@ class AppConstants {
   static const String authTokenKey = 'auth_token';
   static const String userDataKey = 'user_data';
   static const String roleKey = 'user_role';
+  static const String rememberMeKey = 'remember_me';
+  static const String sessionExpiryKey = 'session_expiry';
 }

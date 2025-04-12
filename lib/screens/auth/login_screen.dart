@@ -6,6 +6,7 @@ import 'package:tasklink/screens/recruiter/recruiter_home_screen.dart';
 import 'package:tasklink/services/auth_service.dart';
 import 'package:tasklink/utils/constants.dart';
 import 'package:tasklink/utils/validators.dart';
+import 'package:tasklink/screens/auth/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -164,18 +165,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: authService.rememberMe,
+                      onChanged: (value) {
+                        if (value != null) {
+                          authService.rememberMe = value;
+                        }
+                      },
+                      activeColor: theme.colorScheme.primary,
+                    ),
+                    const Text('Remember me'),
 
-                // Forgot password link
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      // Navigate to forgot password screen
-                    },
-                    child: const Text('Forgot Password?'),
-                  ),
+                    // This pushes the forgot password link to the right
+                    const Spacer(),
+
+                    // Forgot password link - keep your existing implementation here
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
+
 
                 // Login button
                 ElevatedButton(

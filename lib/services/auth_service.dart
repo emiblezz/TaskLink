@@ -7,6 +7,7 @@ import 'package:tasklink/config/app_config.dart';
 import 'package:tasklink/models/user_model.dart';
 import 'package:tasklink/services/supabase_service.dart';
 import 'package:tasklink/utils/constants.dart';
+import 'package:gotrue/gotrue.dart';
 
 class AuthService extends ChangeNotifier {
   final SupabaseClient _supabaseClient = AppConfig().supabaseClient;
@@ -16,6 +17,8 @@ class AuthService extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _rememberMe = false;
+  bool get rememberMe => _rememberMe;
 
   UserModel? get currentUser => _currentUser;
 
@@ -31,12 +34,52 @@ class AuthService extends ChangeNotifier {
 
   bool get isAdmin => _currentUser?.roleId == AppConstants.adminRoleId;
 
+  set rememberMe(bool value) {
+    _rememberMe = value;
+    _saveRememberMePreference(value);
+    notifyListeners();
+  }
+  Future<void> _loadRememberMePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _rememberMe = prefs.getBool(AppConstants.rememberMeKey) ?? false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading remember me preference: $e');
+    }
+  }
+  Future<void> _saveRememberMePreference(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(AppConstants.rememberMeKey, value);
+    } catch (e) {
+      debugPrint('Error saving remember me preference: $e');
+    }
+  }
   // Initialize and check if user is already logged in
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      // Load remember me preference
+      await _loadRememberMePreference();
+
+      // Check for session expiry if rememberMe was false
+      final prefs = await SharedPreferences.getInstance();
+      final sessionExpiry = prefs.getInt(AppConstants.sessionExpiryKey);
+
+      if (sessionExpiry != null) {
+        final expiryDate = DateTime.fromMillisecondsSinceEpoch(sessionExpiry);
+        if (DateTime.now().isAfter(expiryDate)) {
+          // Session expired, sign out
+          await logout();
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+      }
+
       // Check if user is already authenticated
       final authUser = _authClient.currentUser;
       if (authUser != null) {
@@ -134,6 +177,17 @@ class AuthService extends ChangeNotifier {
           AppConstants.userDataKey, jsonEncode(_currentUser!.toJson()));
       await prefs.setInt(AppConstants.roleKey, _currentUser!.roleId);
 
+      // If rememberMe is false, set a session expiry
+      if (!_rememberMe) {
+        // Session will expire after 1 day instead of the default longer time
+        // We can't directly control session length, but we can clear it ourselves later
+        await prefs.setInt(AppConstants.sessionExpiryKey,
+            DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch);
+      } else {
+        // Remove any existing expiry
+        await prefs.remove(AppConstants.sessionExpiryKey);
+      }
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -226,10 +280,46 @@ class AuthService extends ChangeNotifier {
       return false;
     }
   }
+  Future<bool> completePasswordReset({required String newPassword}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      // If the user is following a password reset link, they'll already have an active session
+      // Update their password using the UpdateUserAttributes method
+      await _authClient.updateUser(
+        UserAttributes(
+          password: newPassword,
+        ),
+      );
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
 
   // Clear error message
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+  String _getReadableErrorMessage(String error) {
+    if (error.contains('email not found')) {
+      return 'This email is not registered in our system.';
+    } else if (error.contains('invalid email')) {
+      return 'Please enter a valid email address.';
+    } else if (error.contains('too many requests')) {
+      return 'Too many attempts. Please try again later.';
+    } else if (error.contains('closed')) {
+      return 'Connection error. Please check your internet.';
+    }
+    return 'An error occurred. Please try again.';
   }
 }
