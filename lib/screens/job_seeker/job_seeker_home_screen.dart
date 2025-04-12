@@ -488,39 +488,45 @@ class _ProfileTab extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      // Use ListView instead of Column to make it scrollable
+      child: ListView(
         children: [
           const SizedBox(height: 24),
 
           // Profile avatar
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: Text(
-              user?.name.isNotEmpty == true
-                  ? user!.name.substring(0, 1).toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+          Center(
+            child: CircleAvatar(
+              radius: 60,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: Text(
+                user?.name.isNotEmpty == true
+                    ? user!.name.substring(0, 1).toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
 
           // User name
-          Text(
-            user?.name ?? 'User',
-            style: Theme.of(context).textTheme.headlineSmall,
+          Center(
+            child: Text(
+              user?.name ?? 'User',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
           ),
           const SizedBox(height: 4),
 
           // User email
-          Text(
-            user?.email ?? 'email@example.com',
-            style: const TextStyle(color: Colors.grey),
+          Center(
+            child: Text(
+              user?.email ?? 'email@example.com',
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -598,7 +604,7 @@ class _ProfileTab extends StatelessWidget {
               ],
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 32), // Replace Spacer with fixed height
 
           // Logout button
           ElevatedButton.icon(

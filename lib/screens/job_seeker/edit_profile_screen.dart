@@ -19,7 +19,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _experienceController = TextEditingController();
   final _educationController = TextEditingController();
   final _linkedinController = TextEditingController();
-  final _scrollController = ScrollController();
   String? _cvUrl;
   String? _cvFileName;
   bool _isUploading = false;
@@ -36,7 +35,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _experienceController.dispose();
     _educationController.dispose();
     _linkedinController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -203,243 +201,225 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileService = Provider.of<ProfileService>(context);
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding = mediaQuery.viewInsets.bottom + 100; // Add extra padding for keyboard
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard when tapping outside
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Edit Profile'),
-          actions: [
-            // Logout button in app bar
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Logout',
-              onPressed: _logout,
-            ),
-          ],
-        ),
-        body: profileService.isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              // Add extra padding at the bottom for keyboard
-              padding: EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  top: 16.0,
-                  bottom: bottomPadding
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // CV Upload
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Resume/CV',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Profile'),
+        actions: [
+          // Logout button in app bar
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: _logout,
+          ),
+        ],
+      ),
+      // Use a ListView directly instead of any Column or nested scrollables
+      body: profileService.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // CV Upload
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Resume/CV',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (_cvFileName != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.description),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _cvFileName!,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
                               ),
-                              const SizedBox(height: 12),
-
-                              if (_cvFileName != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                    horizontal: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.description),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _cvFileName!,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                              const SizedBox(height: 16),
-
-                              ElevatedButton.icon(
-                                onPressed: _isUploading ? null : _uploadCV,
-                                icon: const Icon(Icons.upload_file),
-                                label: _isUploading
-                                    ? const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      height: 16,
-                                      width: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('Uploading...'),
-                                  ],
-                                )
-                                    : Text(_cvFileName == null
-                                    ? 'Simulate CV Upload'
-                                    : 'Update CV (Simulated)'),
-                              ),
-                              if (_cvFileName != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    'CV File: $_cvFileName',
-                                    style: TextStyle(
-                                      color: Colors.grey[700],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              const Padding(
-                                padding: EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  'Note: This is a simulated CV upload for Phase 2.',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
+                    ),
 
-                      // Skills
-                      TextFormField(
-                        controller: _skillsController,
-                        decoration: const InputDecoration(
-                          labelText: 'Skills',
-                          hintText: 'Enter your skills (e.g., JavaScript, Project Management)',
-                          prefixIcon: Icon(Icons.assessment_outlined),
-                        ),
-                        validator: (value) => Validators.validateRequired(
-                          value,
-                          'Skills',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                      // Experience
-                      TextFormField(
-                        controller: _experienceController,
-                        decoration: const InputDecoration(
-                          labelText: 'Work Experience',
-                          hintText: 'Describe your work experience',
-                          alignLabelWithHint: true,
-                          prefixIcon: Icon(Icons.work_outline),
-                        ),
-                        maxLines: 3,
-                        validator: (value) => Validators.validateRequired(
-                          value,
-                          'Work experience',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Education
-                      TextFormField(
-                        controller: _educationController,
-                        decoration: const InputDecoration(
-                          labelText: 'Education',
-                          hintText: 'Enter your educational background',
-                          alignLabelWithHint: true,
-                          prefixIcon: Icon(Icons.school_outlined),
-                        ),
-                        maxLines: 3,
-                        validator: (value) => Validators.validateRequired(
-                          value,
-                          'Education',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // LinkedIn
-                      TextFormField(
-                        controller: _linkedinController,
-                        decoration: const InputDecoration(
-                          labelText: 'LinkedIn Profile',
-                          hintText: 'Enter your LinkedIn profile URL',
-                          prefixIcon: Icon(Icons.link),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Save Button
-                      ElevatedButton(
-                        onPressed: profileService.isLoading ? null : _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: profileService.isLoading
-                            ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                  ElevatedButton.icon(
+                    onPressed: _isUploading ? null : _uploadCV,
+                    icon: const Icon(Icons.upload_file),
+                    label: _isUploading
+                        ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 16,
+                          width: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
                           ),
-                        )
-                            : const Text(
-                          'Save Profile',
-                          style: TextStyle(fontSize: 16),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Uploading...'),
+                      ],
+                    )
+                        : Text(_cvFileName == null
+                        ? 'Simulate CV Upload'
+                        : 'Update CV (Simulated)'),
+                  ),
+                  if (_cvFileName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        'CV File: $_cvFileName',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 12,
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // Logout Button
-                      OutlinedButton.icon(
-                        onPressed: _logout,
-                        icon: const Icon(Icons.logout),
-                        label: const Text('Logout'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          foregroundColor: Colors.red,
-                        ),
+                    ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      'Note: This is a simulated CV upload for Phase 2.',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
-                      const SizedBox(height: 100), // Extra large bottom padding
-                    ],
+          // Form inside ListView
+          Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Skills
+                TextFormField(
+                  controller: _skillsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Skills',
+                    hintText: 'Enter your skills (e.g., JavaScript, Project Management)',
+                    prefixIcon: Icon(Icons.assessment_outlined),
+                  ),
+                  validator: (value) => Validators.validateRequired(
+                    value,
+                    'Skills',
                   ),
                 ),
-              ),
-            );
-          },
-        ),
+                const SizedBox(height: 16),
+
+                // Experience
+                TextFormField(
+                  controller: _experienceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Work Experience',
+                    hintText: 'Describe your work experience',
+                    alignLabelWithHint: true,
+                    prefixIcon: Icon(Icons.work_outline),
+                  ),
+                  maxLines: 3,
+                  validator: (value) => Validators.validateRequired(
+                    value,
+                    'Work experience',
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Education
+                TextFormField(
+                  controller: _educationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Education',
+                    hintText: 'Enter your educational background',
+                    alignLabelWithHint: true,
+                    prefixIcon: Icon(Icons.school_outlined),
+                  ),
+                  maxLines: 3,
+                  validator: (value) => Validators.validateRequired(
+                    value,
+                    'Education',
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // LinkedIn
+                TextFormField(
+                  controller: _linkedinController,
+                  decoration: const InputDecoration(
+                    labelText: 'LinkedIn Profile',
+                    hintText: 'Enter your LinkedIn profile URL',
+                    prefixIcon: Icon(Icons.link),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Save Button
+                ElevatedButton(
+                  onPressed: profileService.isLoading ? null : _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: profileService.isLoading
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    'Save Profile',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Logout Button
+                OutlinedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: Colors.red,
+                  ),
+                ),
+
+                // Extra bottom padding to ensure no overflow
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

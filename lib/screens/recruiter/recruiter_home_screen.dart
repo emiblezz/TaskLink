@@ -454,19 +454,22 @@ class _JobPostingsTabState extends State<_JobPostingsTab> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Chip(
-                                label: Text(job.status),
-                                backgroundColor: job.status == 'Open'
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.1),
-                                labelStyle: TextStyle(
-                                  color: job.status == 'Open' ? Colors.green : Colors.red,
-                                ),
-                              ),
-                              Row(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Chip(
+                            label: Text(job.status),
+                            backgroundColor: job.status == 'Open'
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.red.withOpacity(0.1),
+                            labelStyle: TextStyle(
+                              color: job.status == 'Open' ? Colors.green : Colors.red,
+                            ),
+                          ),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
                                 children: [
                                   TextButton.icon(
                                     icon: const Icon(Icons.edit, size: 16),
@@ -511,8 +514,10 @@ class _JobPostingsTabState extends State<_JobPostingsTab> {
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
+                        ],
+                      ),
                         ],
                       ),
                     ),
@@ -695,7 +700,7 @@ class _CandidatesTabState extends State<_CandidatesTab> {
                           icon: const Icon(Icons.auto_awesome),
                           label: const Text('AI Ranking'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor: Colors.grey.shade700,
                           ),
                         ),
                       ),
