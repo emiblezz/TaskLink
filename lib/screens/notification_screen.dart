@@ -95,9 +95,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         itemCount: notifications.length,
         itemBuilder: (context, index) {
           final notification = notifications[index];
-          return _NotificationTile(
-            notification: notification,
-            onTap: () => _handleNotificationTap(notification),
+          return Dismissible(
+            key: Key('notification_${notification.id}'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              color: Colors.red,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              child: const Icon(
+                Icons.delete,
+                color: Colors.white,
+              ),
+            ),
+            onDismissed: (direction) {
+              // Get notificationService from Provider inside the callback
+              final notificationService = Provider.of<NotificationService>(context, listen: false);
+              notificationService.deleteNotification(notification.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notification deleted')),
+              );
+            },
+            child: _NotificationTile(
+              notification: notification,
+              onTap: () => _handleNotificationTap(notification),
+            ),
           );
         },
       ),
@@ -153,10 +174,7 @@ class _NotificationTile extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: _getNotificationColor(notification.type).withOpacity(0.1),
         child: Icon(
-          IconData(
-            _getIconData(notification.iconName),
-            fontFamily: 'MaterialIcons',
-          ),
+          _getNotificationIcon(notification.iconName),
           color: _getNotificationColor(notification.type),
         ),
       ),
@@ -197,19 +215,18 @@ class _NotificationTile extends StatelessWidget {
     }
   }
 
-  int _getIconData(String iconName) {
-    // Convert icon string names to MaterialIcons codepoints
+  IconData _getNotificationIcon(String iconName) {
     switch (iconName) {
       case 'description':
-        return Icons.description.codePoint;
+        return Icons.description;
       case 'update':
-        return Icons.update.codePoint;
+        return Icons.update;
       case 'work':
-        return Icons.work.codePoint;
+        return Icons.work;
       case 'mail':
-        return Icons.mail.codePoint;
+        return Icons.mail;
       default:
-        return Icons.notifications.codePoint;
+        return Icons.notifications;
     }
   }
 }

@@ -2,9 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase/supabase.dart';
 import 'package:tasklink/models/notification_model.dart';
 import 'package:tasklink/services/supabase_service.dart';
+import 'package:tasklink/config/app_config.dart';
 
 class NotificationService extends ChangeNotifier {
-  final SupabaseService _supabaseService = SupabaseService();
+  final _supabaseService = SupabaseService();
   List<NotificationModel> _notifications = [];
   bool _isLoading = false;
   int _unreadCount = 0;
@@ -12,9 +13,6 @@ class NotificationService extends ChangeNotifier {
   List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
   int get unreadCount => _unreadCount;
-
-  // Initialize and listen for notifications
-
 
   // Fetch notifications for a user
   Future<void> fetchNotifications(String userId) async {
@@ -62,6 +60,12 @@ class NotificationService extends ChangeNotifier {
         'timestamp': DateTime.now().toIso8601String(),
         'status': 'Unread',
       });
+
+      // If this notification is for the user whose notifications we're currently displaying
+      // then refresh the list
+      if (_notifications.isNotEmpty && _notifications.first.userId == userId) {
+        await fetchNotifications(userId);
+      }
     } catch (e) {
       print('Error creating notification: $e');
     }
@@ -108,12 +112,68 @@ class NotificationService extends ChangeNotifier {
     }
   }
 
+  // Delete a notification
+  Future<void> deleteNotification(int notificationId) async {
+    try {
+      await _supabaseService.supabase
+          .from('notifications')
+          .delete()
+          .eq('notification_id', notificationId);
+
+      final index = _notifications.indexWhere((n) => n.id == notificationId);
+      if (index != -1) {
+        if (_notifications[index].status == 'Unread') {
+          _unreadCount = max(0, _unreadCount - 1);
+        }
+        _notifications.removeAt(index);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error deleting notification: $e');
+    }
+  }
+
+  // Helper methods for notification types
+  Future<void> notifyJobApplication({
+    required String recruiterId,
+    required String jobTitle,
+    required String applicantName
+  }) async {
+    await createNotification(
+      userId: recruiterId,
+      notificationType: 'application',
+      message: '$applicantName has applied for the position: $jobTitle',
+    );
+  }
+
+  Future<void> notifyStatusChange({
+    required String applicantId,
+    required String jobTitle,
+    required String status,
+  }) async {
+    await createNotification(
+      userId: applicantId,
+      notificationType: 'status_update',
+      message: 'Your application for $jobTitle has been $status',
+    );
+  }
+
+  Future<void> notifyNewJob({
+    required List<String> jobSeekerIds,
+    required String jobTitle,
+    required String companyName,
+  }) async {
+    for (final userId in jobSeekerIds) {
+      await createNotification(
+        userId: userId,
+        notificationType: 'job_match',
+        message: 'New job opportunity: $jobTitle at $companyName',
+      );
+    }
+  }
+
   // Helper function for max value
   int max(int a, int b) {
     return a > b ? a : b;
   }
-}
-
-extension on SupabaseClient {
-  on(RealtimeListenTypes postgresChanges, Null Function(dynamic payload) param1, {required String filter}) {}
 }

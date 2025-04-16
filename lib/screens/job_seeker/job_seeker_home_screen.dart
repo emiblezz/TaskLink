@@ -9,6 +9,9 @@ import 'package:tasklink/services/job_service.dart';
 import 'package:tasklink/services/profile_service.dart';
 import 'package:intl/intl.dart';
 
+import '../../widgets/notification_badge.dart';
+
+
 class JobSeekerHomeScreen extends StatefulWidget {
   const JobSeekerHomeScreen({super.key});
 
@@ -133,11 +136,12 @@ class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
       appBar: AppBar(
         title: const Text('TaskLink'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // Open notifications
-            },
+          NotificationBadge(
+            child: IconButton(
+              icon: const Icon(Icons.notifications, color: Colors.white),
+              tooltip: 'Notifications',
+              onPressed: null, // The badge handles the tap
+            ),
           ),
         ],
       ),

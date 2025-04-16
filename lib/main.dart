@@ -30,12 +30,20 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => JobService()),
+        ChangeNotifierProvider(create: (_) => NotificationService()),
         ChangeNotifierProvider(create: (_) => ProfileService()),
         ChangeNotifierProvider(create: (_) => RankingService()),
-        ChangeNotifierProvider(create: (_) => NotificationService()),
         ChangeNotifierProvider(create: (_) => SearchService()),
         ChangeNotifierProvider(create: (_) => AnalyticsService()),
+        // JobService needs access to AuthService and NotificationService
+        ChangeNotifierProxyProvider2<AuthService, NotificationService, JobService>(
+          create: (_) => JobService(),
+          update: (_, authService, notificationService, jobService) {
+            jobService!.setAuthService(authService);
+            jobService.setNotificationService(notificationService);
+            return jobService;
+          },
+        ),
       ],
       child: Consumer<AuthService>(
         builder: (context, authService, _) {

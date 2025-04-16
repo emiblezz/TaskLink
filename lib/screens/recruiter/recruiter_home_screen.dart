@@ -12,6 +12,9 @@ import 'package:tasklink/services/auth_service.dart';
 import 'package:tasklink/services/job_service.dart';
 import 'package:tasklink/services/supabase_service.dart';
 
+import '../../widgets/notification_badge.dart';
+
+
 class RecruiterHomeScreen extends StatefulWidget {
   const RecruiterHomeScreen({super.key});
 
@@ -59,11 +62,12 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
       appBar: AppBar(
         title: const Text('TaskLink Recruiter'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // Open notifications
-            },
+          NotificationBadge(
+            child: IconButton(
+              icon: const Icon(Icons.notifications),
+              tooltip: 'Notifications',
+              onPressed: null, // The badge handles the tap
+            ),
           ),
         ],
       ),

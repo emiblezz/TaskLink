@@ -3,9 +3,13 @@ import 'package:supabase/supabase.dart';
 import 'package:tasklink/config/app_config.dart';
 import 'package:tasklink/models/job_model.dart';
 import 'package:tasklink/models/application_model.dart';
+import 'package:tasklink/services/auth_service.dart';
+import 'package:tasklink/services/notification_service.dart';
 
 class JobService extends ChangeNotifier {
   final SupabaseClient _supabaseClient = AppConfig().supabaseClient;
+  AuthService? _authService;
+  NotificationService? _notificationService;
 
   List<JobModel> _jobs = [];
   List<ApplicationModel> _applications = [];
@@ -16,6 +20,15 @@ class JobService extends ChangeNotifier {
   List<ApplicationModel> get applications => _applications;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  // Allow setting services from outside
+  void setAuthService(AuthService authService) {
+    _authService = authService;
+  }
+
+  void setNotificationService(NotificationService notificationService) {
+    _notificationService = notificationService;
+  }
 
   // Get all jobs
   Future<void> fetchJobs() async {
@@ -94,6 +107,27 @@ class JobService extends ChangeNotifier {
 
       final newJob = JobModel.fromJson(response as Map<String, dynamic>);
       _jobs.add(newJob);
+
+      // Send notifications if the service is available
+      if (_notificationService != null && _authService != null && _authService!.currentUser != null) {
+        // This is a simplified version - you'd need to get job seeker IDs
+        // For now, we're just demonstrating the concept
+        try {
+          // Get job seekers - this is simplified and would need to be replaced
+          // with your actual implementation to fetch job seekers
+          List<String> jobSeekerIds = await _getJobSeekerIds();
+
+          await _notificationService!.notifyNewJob(
+            jobSeekerIds: jobSeekerIds,
+            jobTitle: newJob.jobTitle,
+            companyName: _authService!.currentUser!.name,
+          );
+        } catch (notificationError) {
+          print('Error sending job notifications: $notificationError');
+          // Continue execution even if notifications fail
+        }
+      }
+
       _isLoading = false;
       notifyListeners();
       return newJob;
@@ -102,6 +136,24 @@ class JobService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return null;
+    }
+  }
+
+  // Helper method to get job seeker IDs
+  // This is a placeholder - implement your actual logic
+  Future<List<String>> _getJobSeekerIds() async {
+    try {
+      // Example implementation - replace with your actual query
+      final response = await _supabaseClient
+          .from('users')
+          .select('user_id')
+          .eq('role_id', 1) // Assuming 1 is the job seeker role ID
+          .limit(20); // Limit to avoid notifying too many users
+
+      return (response as List).map((user) => user['user_id'] as String).toList();
+    } catch (e) {
+      print('Error fetching job seeker IDs: $e');
+      return [];
     }
   }
 
@@ -188,6 +240,24 @@ class JobService extends ChangeNotifier {
 
       final newApplication = ApplicationModel.fromJson(response as Map<String, dynamic>);
       _applications.add(newApplication);
+
+      // Send notification if services are available
+      if (_notificationService != null && _authService != null && _authService!.currentUser != null) {
+        try {
+          final job = await getJobById(jobId);
+          if (job != null) {
+            await _notificationService!.notifyJobApplication(
+              recruiterId: job.recruiterId,
+              jobTitle: job.jobTitle,
+              applicantName: _authService!.currentUser!.name,
+            );
+          }
+        } catch (notificationError) {
+          print('Error sending application notification: $notificationError');
+          // Continue execution even if notification fails
+        }
+      }
+
       _isLoading = false;
       notifyListeners();
       return newApplication;
@@ -247,6 +317,22 @@ class JobService extends ChangeNotifier {
     }
   }
 
+  // Get application by ID
+  Future<ApplicationModel?> getApplicationById(int applicationId) async {
+    try {
+      final response = await _supabaseClient
+          .from('applications')
+          .select()
+          .eq('application_id', applicationId)
+          .single();
+
+      return ApplicationModel.fromJson(response as Map<String, dynamic>);
+    } catch (e) {
+      _errorMessage = e.toString();
+      return null;
+    }
+  }
+
   // Update application status
   Future<bool> updateApplicationStatus(int applicationId, String status) async {
     _isLoading = true;
@@ -263,6 +349,26 @@ class JobService extends ChangeNotifier {
       final index = _applications.indexWhere((a) => a.id == applicationId);
       if (index != -1) {
         _applications[index] = _applications[index].copyWith(applicationStatus: status);
+      }
+
+      // Send notification if services are available
+      if (_notificationService != null) {
+        try {
+          final application = await getApplicationById(applicationId);
+          if (application != null) {
+            final job = await getJobById(application.jobId);
+            if (job != null) {
+              await _notificationService!.notifyStatusChange(
+                applicantId: application.applicantId,
+                jobTitle: job.jobTitle,
+                status: status,
+              );
+            }
+          }
+        } catch (notificationError) {
+          print('Error sending status update notification: $notificationError');
+          // Continue execution even if notification fails
+        }
       }
 
       _isLoading = false;
