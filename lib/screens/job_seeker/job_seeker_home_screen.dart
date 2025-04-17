@@ -608,26 +608,7 @@ class _ProfileTab extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 32), // Replace Spacer with fixed height
 
-          // Logout button
-          ElevatedButton.icon(
-            onPressed: () async {
-              await authService.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              }
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Log Out'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-            ),
-          ),
           const SizedBox(height: 16),
         ],
       ),

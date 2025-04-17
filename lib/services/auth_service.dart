@@ -107,31 +107,21 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Create the auth user
+      // Create the auth user with redirectTo for email confirmation
       final authResponse = await _authClient.signUp(
         email: email,
         password: password,
+        data: {
+          'name': name,
+          'phone': phone,
+          'role_id': roleId,
+        },
+        emailRedirectTo: 'io.supabase.tasklink://auth/callback',
       );
 
       if (authResponse.user == null) {
         throw Exception('Failed to create user');
       }
-
-      // Create the user in our database
-      final user = UserModel(
-        id: authResponse.user!.id,
-        name: name,
-        email: email,
-        phone: phone,
-        roleId: roleId,
-        profileStatus: 'Active',
-        dateJoined: DateTime.now(),
-      );
-
-      await _supabaseService.createOrUpdateUser(user);
-
-      // Sign out after registration (they need to verify email first)
-      await _authClient.signOut();
 
       _isLoading = false;
       notifyListeners();
@@ -227,12 +217,17 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authClient.resetPasswordForEmail(email);
+      // The redirectTo parameter is crucial for making the email links work
+      await _authClient.resetPasswordForEmail(
+        email,
+        redirectTo: 'io.supabase.tasklink://reset-password',
+      );
+
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'Error sending password reset: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -280,25 +275,29 @@ class AuthService extends ChangeNotifier {
       return false;
     }
   }
-  Future<bool> completePasswordReset({required String newPassword}) async {
+  Future<bool> completePasswordReset(String newPassword) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // If the user is following a password reset link, they'll already have an active session
-      // Update their password using the UpdateUserAttributes method
-      await _authClient.updateUser(
+      // This updates the user's password once they've clicked the email link
+      final response = await _authClient.updateUser(
         UserAttributes(
           password: newPassword,
         ),
       );
 
-      _isLoading = false;
-      notifyListeners();
-      return true;
+      if (response.user != null) {
+        _currentUser = await _supabaseService.getUserById(response.user!.id);
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        throw Exception('Failed to update password');
+      }
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'Error resetting password: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
       return false;

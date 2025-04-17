@@ -9,6 +9,7 @@ import 'package:tasklink/services/notification_service.dart';
 import 'package:tasklink/services/profile_service.dart';
 import 'package:tasklink/services/ranking_service.dart';
 import 'package:tasklink/services/search_service.dart';
+import 'package:tasklink/utils/deep_link_handler.dart';
 import 'package:tasklink/utils/theme.dart';
 
 void main() async {
@@ -17,6 +18,9 @@ void main() async {
 
   // Initialize AppConfig (this loads .env and SupabaseClient inside)
   await AppConfig().initialize();
+
+  // Setup deep links for auth flow
+  await DeepLinkHandler.setupDeepLinks();
 
   // Run the app
   runApp(const MyApp());
@@ -53,6 +57,8 @@ class MyApp extends StatelessWidget {
             darkTheme: AppTheme.darkTheme,
             themeMode: ThemeMode.system,
             debugShowCheckedModeBanner: false,
+            // Use navigator key for deep linking
+            navigatorKey: DeepLinkHandler.navigatorKey,
             home: const SplashScreen(),
           );
         },

@@ -45,7 +45,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       final authService = Provider.of<AuthService>(context, listen: false);
 
       final success = await authService.completePasswordReset(
-        newPassword: _passwordController.text,
+        _passwordController.text,
       );
 
       if (!mounted) return;
