@@ -29,7 +29,7 @@ dependencies:
   # For sharing analytics and reports
   share_plus: ^7.2.1
   app_links: ^3.4.1
-
+  url_launcher: ^6.1.11
 dev_dependencies:
   flutter_test:
     sdk: flutter

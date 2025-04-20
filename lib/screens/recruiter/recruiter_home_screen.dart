@@ -13,6 +13,8 @@ import 'package:tasklink/services/job_service.dart';
 import 'package:tasklink/services/supabase_service.dart';
 
 import '../../widgets/notification_badge.dart';
+import '../help_desk_screen.dart';
+import '../settings_screen.dart';
 
 
 class RecruiterHomeScreen extends StatefulWidget {
@@ -62,6 +64,28 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
       appBar: AppBar(
         title: const Text('TaskLink Recruiter'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(isRecruiter: true),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HelpDeskScreen(isRecruiter: true),
+                ),
+              );
+            },
+          ),
           NotificationBadge(
             child: IconButton(
               icon: const Icon(Icons.notifications),
@@ -1024,10 +1048,15 @@ class _ProfileTab extends StatelessWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.settings_outlined),
-                  title: const Text('Preferences'),
+                  title: const Text('Settings'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // Navigate to preferences
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(isRecruiter: true),
+                      ),
+                    );
                   },
                 ),
                 const Divider(height: 1),
@@ -1036,7 +1065,12 @@ class _ProfileTab extends StatelessWidget {
                   title: const Text('Help & Support'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // Navigate to help
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HelpDeskScreen(isRecruiter: true),
+                      ),
+                    );
                   },
                 ),
               ],
