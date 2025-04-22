@@ -1,133 +1,187 @@
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase/supabase.dart';
 import 'package:tasklink/config/app_config.dart';
 import 'package:tasklink/models/jobseeker_profile_model.dart';
-
+import 'package:tasklink/services/file_service.dart';
 
 class ProfileService extends ChangeNotifier {
-  final SupabaseClient _supabaseClient = AppConfig().supabaseClient;
-
+  late final SupabaseClient _supabase;
   JobSeekerProfileModel? _profile;
   bool _isLoading = false;
   String? _errorMessage;
 
+  ProfileService() {
+    // Get Supabase client from the AppConfig instance
+    _supabase = AppConfig().supabaseClient;
+  }
+
   JobSeekerProfileModel? get profile => _profile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get hasProfile => _profile != null;
 
-  // Get jobseeker profile
-  Future<void> fetchProfile(String userId) async {
-    _isLoading = true;
+  // Fetch profile data
+  Future<JobSeekerProfileModel?> fetchProfile(String userId) async {
+    _setLoading(true);
     _errorMessage = null;
-    notifyListeners();
 
     try {
-      final response = await _supabaseClient
+      // First check if user exists in users table
+      final userResponse = await _supabase
+          .from('users')
+          .select()
+          .eq('user_id', userId)
+          .single();
+
+      if (userResponse == null) {
+        _errorMessage = 'User profile not found';
+        _setLoading(false);
+        return null;
+      }
+
+      // Then check if jobseeker profile exists
+      final response = await _supabase
           .from('jobseeker_profiles')
           .select()
           .eq('user_id', userId)
           .maybeSingle();
 
       if (response != null) {
-        _profile = JobSeekerProfileModel.fromJson(response as Map<String, dynamic>);
+        _profile = JobSeekerProfileModel.fromJson(response);
+        _setLoading(false);
+        return _profile;
       } else {
-        _profile = null;
+        // Profile doesn't exist yet, return an empty profile
+        _profile = JobSeekerProfileModel(
+          userId: userId,
+          cv: null,
+          skills: '',
+          experience: '',
+          education: '',
+          linkedinProfile: '',
+        );
+        _setLoading(false);
+        return _profile;
       }
-
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
-      _errorMessage = e.toString();
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Create or update profile
-  Future<JobSeekerProfileModel?> saveProfile(JobSeekerProfileModel profile) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final exists = await _checkProfileExists(profile.userId);
-
-      final response = exists
-          ? await _supabaseClient
-          .from('jobseeker_profiles')
-          .update(profile.toJson())
-          .eq('user_id', profile.userId)
-          .select()
-          .single()
-          : await _supabaseClient
-          .from('jobseeker_profiles')
-          .insert(profile.toJson())
-          .select()
-          .single();
-
-      _profile = JobSeekerProfileModel.fromJson(response as Map<String, dynamic>);
-      _isLoading = false;
-      notifyListeners();
-      return _profile;
-    } catch (e) {
-      _errorMessage = e.toString();
-      _isLoading = false;
-      notifyListeners();
+      _errorMessage = 'Error fetching profile: ${e.toString()}';
+      _setLoading(false);
       return null;
     }
   }
 
-  // Check if profile exists
-  Future<bool> _checkProfileExists(String userId) async {
+  // Save or update profile
+  Future<JobSeekerProfileModel?> saveProfile(JobSeekerProfileModel profile) async {
+    _setLoading(true);
+    _errorMessage = null;
+
     try {
-      final response = await _supabaseClient
+      // Check if profile exists
+      final existingProfile = await _supabase
           .from('jobseeker_profiles')
-          .select('profile_id')
-          .eq('user_id', userId)
+          .select()
+          .eq('user_id', profile.userId)
           .maybeSingle();
 
-      return response != null;
-    } catch (e) {
-      return false;
-    }
-  }
+      if (existingProfile != null) {
+        // Update existing profile
+        final response = await _supabase
+            .from('jobseeker_profiles')
+            .update(profile.toJson())
+            .eq('user_id', profile.userId)
+            .select()
+            .single();
 
-  // For Phase 2, we'll use a simulated CV upload that doesn't require a file picker
-  // This is a temporary solution to avoid package compatibility issues
-  Future<String?> simulateUploadCV(String userId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+        _profile = JobSeekerProfileModel.fromJson(response);
+      } else {
+        // Create new profile
+        final response = await _supabase
+            .from('jobseeker_profiles')
+            .insert(profile.toJson())
+            .select()
+            .single();
 
-    try {
-      // Create a simulated CV URL (in a real app, this would be a URL to a file)
-      final simulatedUrl = "https://example.com/cvs/$userId/simulated-cv.pdf";
-
-      // If we have a profile, update it with the simulated CV URL
-      if (_profile != null) {
-        final updatedProfile = _profile!.copyWith(
-          cv: simulatedUrl,
-        );
-
-        await saveProfile(updatedProfile);
+        _profile = JobSeekerProfileModel.fromJson(response);
       }
 
-      _isLoading = false;
-      notifyListeners();
-      return simulatedUrl;
+      _setLoading(false);
+      return _profile;
     } catch (e) {
-      _errorMessage = e.toString();
-      _isLoading = false;
-      notifyListeners();
+      _errorMessage = 'Error saving profile: ${e.toString()}';
+      _setLoading(false);
       return null;
     }
   }
 
-  // Clear error
-  void clearError() {
+  // Method to pick and upload CV using real file picker
+  Future<String?> pickAndUploadCV(String userId) async {
     _errorMessage = null;
+
+    try {
+      // Use the real file picker
+      final pickedFile = await FileService.pickCV();
+
+      if (pickedFile == null) {
+        return null; // User cancelled the picker
+      }
+
+      final fileName = pickedFile['name'] as String;
+      final fileBytes = pickedFile['bytes'] as Uint8List;
+      final isReal = pickedFile['isReal'] as bool? ?? false;
+
+      // Upload to Supabase Storage
+      final String filePath = 'cvs/$userId/$fileName';
+
+      final uploadResponse = await _supabase
+          .storage
+          .from('cvs')
+          .uploadBinary(
+        filePath,
+        fileBytes,
+        fileOptions: FileOptions(
+          contentType: _getContentType(fileName),
+        ),
+      );
+
+      if (uploadResponse.isNotEmpty) {
+        // Get the public URL
+        final String publicUrl = _supabase
+            .storage
+            .from('cvs')
+            .getPublicUrl(filePath);
+
+        // Mark the URL if it's simulated
+        if (!isReal) {
+          return '$publicUrl#fallback';
+        }
+
+        return publicUrl;
+      } else {
+        _errorMessage = 'Failed to upload CV';
+        return null;
+      }
+    } catch (e) {
+      _errorMessage = 'Error uploading CV: ${e.toString()}';
+      return null;
+    }
+  }
+
+  // Helper method to determine content type from file name
+  String _getContentType(String fileName) {
+    if (fileName.toLowerCase().endsWith('.pdf')) {
+      return 'application/pdf';
+    } else if (fileName.toLowerCase().endsWith('.doc')) {
+      return 'application/msword';
+    } else if (fileName.toLowerCase().endsWith('.docx')) {
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    // Default
+    return 'application/octet-stream';
+  }
+
+  // Helper to set loading state
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
   }
 }

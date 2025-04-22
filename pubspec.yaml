@@ -10,11 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-  # Use supabase and supabase_flutter separately to avoid sign_in_with_apple
   supabase: ^1.11.11
   gotrue: ^1.12.6
   provider: ^6.1.1
-  #file_picker: ^6.1.1
+  file_picker: ^10.1.2  # Updated to latest version as suggested
   path_provider: ^2.1.1
   intl: ^0.19.0
   flutter_dotenv: ^5.1.0
@@ -30,6 +29,7 @@ dependencies:
   share_plus: ^7.2.1
   app_links: ^3.4.1
   url_launcher: ^6.1.11
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

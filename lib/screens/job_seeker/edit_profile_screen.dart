@@ -7,7 +7,7 @@ import 'package:tasklink/services/profile_service.dart';
 import 'package:tasklink/utils/validators.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  const EditProfileScreen({Key? key}) : super(key: key);
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -22,6 +22,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _cvUrl;
   String? _cvFileName;
   bool _isUploading = false;
+  bool _isFallbackMode = false;
 
   @override
   void initState() {
@@ -55,7 +56,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
           // Extract file name from URL
           if (_cvUrl != null && _cvUrl!.isNotEmpty) {
-            final parts = _cvUrl!.split('/');
+            // Check if this is a fallback CV
+            _isFallbackMode = _cvUrl!.contains('#fallback');
+
+            // Clean the URL for display
+            String cleanUrl = _cvUrl!;
+            if (cleanUrl.contains('#')) {
+              cleanUrl = cleanUrl.substring(0, cleanUrl.indexOf('#'));
+            }
+
+            final parts = cleanUrl.split('/');
             _cvFileName = parts.last;
           }
         });
@@ -83,18 +93,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       final userId = authService.currentUser!.id;
-      // Use simulated upload instead of actual file picking
-      final newCvUrl = await profileService.simulateUploadCV(userId);
+
+      // Use the file picker to upload CV
+      final newCvUrl = await profileService.pickAndUploadCV(userId);
 
       if (newCvUrl != null) {
         setState(() {
           _cvUrl = newCvUrl;
-          _cvFileName = "simulated-cv.pdf"; // Simulated filename
+
+          // Check if it was a fallback upload
+          _isFallbackMode = newCvUrl.contains('#fallback');
+
+          // Clean the URL for display
+          String cleanUrl = newCvUrl;
+          if (cleanUrl.contains('#')) {
+            cleanUrl = cleanUrl.substring(0, cleanUrl.indexOf('#'));
+          }
+
+          final parts = cleanUrl.split('/');
+          _cvFileName = parts.last;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('CV uploaded successfully (simulated)'),
+          SnackBar(
+            content: Text(_isFallbackMode
+                ? 'CV uploaded successfully (fallback mode)'
+                : 'CV uploaded successfully'),
             backgroundColor: Colors.green,
           ),
         );
@@ -106,6 +130,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading CV: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() {
         _isUploading = false;
@@ -214,7 +245,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ],
       ),
-      // Use a ListView directly instead of any Column or nested scrollables
       body: profileService.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -251,11 +281,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           const Icon(Icons.description),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              _cvFileName!,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _cvFileName!,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (_isFallbackMode)
+                                  const Text(
+                                    '(Using fallback mode)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ],
@@ -284,24 +327,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ],
                     )
                         : Text(_cvFileName == null
-                        ? 'Simulate CV Upload'
-                        : 'Update CV (Simulated)'),
+                        ? 'Upload CV'
+                        : 'Change CV'),
                   ),
+
                   if (_cvFileName != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        'CV File: $_cvFileName',
+                        'File: $_cvFileName',
                         style: TextStyle(
                           color: Colors.grey[700],
                           fontSize: 12,
                         ),
                       ),
                     ),
+
                   const Padding(
                     padding: EdgeInsets.only(top: 8.0),
                     child: Text(
-                      'Note: This is a simulated CV upload for Phase 2.',
+                      'Upload PDF, DOC, or DOCX files',
                       style: TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
@@ -408,9 +453,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   onPressed: _logout,
                   icon: const Icon(Icons.logout),
                   label: const Text('Log Out'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                  style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
+                    backgroundColor: Colors.red,
                     minimumSize: const Size(double.infinity, 50),
                   ),
                 ),
