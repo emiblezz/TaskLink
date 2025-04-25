@@ -19,8 +19,13 @@ class SupabaseService {
       final response = await _supabaseClient
           .from('users')
           .select()
-          .eq('id', authUser.id)
-          .single();
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+
+      if (response == null) {
+        print('User not found with user_id=${authUser.id}');
+        return null;
+      }
 
       return UserModel.fromJson(response as Map<String, dynamic>);
     } catch (e) {
@@ -32,14 +37,43 @@ class SupabaseService {
   // Get user by ID
   Future<UserModel?> getUserById(String userId) async {
     try {
-      final response = await _supabaseClient
-          .from('users')
-          .select()
-          .eq('user_id', userId)
-          .single();
+      // First, let's print the userId we're searching for
+      print('Searching for user with ID: $userId');
 
-      print('User response: $response');
-      return UserModel.fromJson(response);
+      // Try with user_id column first
+      try {
+        final response = await _supabaseClient
+            .from('users')
+            .select()
+            .eq('user_id', userId)
+            .maybeSingle(); // Use maybeSingle instead of single
+
+        if (response != null) {
+          print('Found user using user_id column');
+          return UserModel.fromJson(response);
+        }
+      } catch (innerError) {
+        print('Error with user_id query: $innerError');
+      }
+
+      // If not found with user_id, try with id
+      try {
+        final response = await _supabaseClient
+            .from('users')
+            .select()
+            .eq('id', userId)
+            .maybeSingle(); // Use maybeSingle instead of single
+
+        if (response != null) {
+          print('Found user using id column');
+          return UserModel.fromJson(response);
+        }
+      } catch (innerError) {
+        print('Error with id query: $innerError');
+      }
+
+      print('No user found with either column name for ID: $userId');
+      return null;
     } catch (e) {
       print('Error getting user by ID: $e');
       return null;
@@ -53,7 +87,7 @@ class SupabaseService {
           .from('jobseeker_profiles')
           .select()
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
 
       if (response != null) {
         return JobSeekerProfileModel.fromJson(response as Map<String, dynamic>);
@@ -71,7 +105,7 @@ class SupabaseService {
       final response = await _supabaseClient
           .from('roles')
           .select()
-          .order('id');
+          .order('role_id');
 
       return (response as List)
           .map((role) => RoleModel.fromJson(role))
@@ -92,7 +126,12 @@ class SupabaseService {
           .from('users')
           .upsert(jsonData)
           .select()
-          .single();
+          .maybeSingle();
+
+      if (response == null) {
+        print('No response after upsert');
+        return null;
+      }
 
       print('Upsert response: $response');
       return UserModel.fromJson(response);
@@ -108,32 +147,42 @@ class SupabaseService {
       await _supabaseClient
           .from('users')
           .delete()
-          .eq('id', userId);
+          .eq('user_id', userId);
       return true;
     } catch (e) {
       print('Error deleting user: $e');
       return false;
     }
   }
-
-  // Get job applications with user profiles
+  // Add this method to your SupabaseService class
   Future<List<Map<String, dynamic>>> getJobApplicationsWithProfiles(int jobId) async {
     try {
+      print('Fetching applications for job ID: $jobId using simple query');
+
+      // Simple query to get all applications for the job
       final applications = await _supabaseClient
           .from('applications')
-          .select('*, users:applicant_id(*)')
+          .select('*')
           .eq('job_id', jobId);
 
-      if (applications is List) {
-        return applications.map((item) {
-          if (item is Map<String, dynamic>) return item;
-          return <String, dynamic>{};
-        }).toList();
+      print('Basic applications query result length: ${applications.length}');
+      print('First few applications: ${applications.take(2)}');
+
+      // Convert the results to the expected format
+      final List<Map<String, dynamic>> result = [];
+
+      for (var app in applications) {
+        // Add each application to the result list
+        result.add(app);
       }
-      return [];
+
+      return result;
     } catch (e) {
-      print('Error getting applications with profiles: $e');
+      print('Error getting applications: $e');
       return [];
     }
   }
+
+  // Get job applications with user profiles - Improved version with join
+
 }

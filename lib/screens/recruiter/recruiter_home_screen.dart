@@ -568,10 +568,12 @@ class _CandidatesTab extends StatefulWidget {
   State<_CandidatesTab> createState() => _CandidatesTabState();
 }
 
+// Replace your current _CandidatesTabState with this updated version
 class _CandidatesTabState extends State<_CandidatesTab> {
   List<JobModel> _jobs = [];
   JobModel? _selectedJob;
   List<ApplicationModel> _applications = [];
+  Map<String, UserModel?> _applicantCache = {};
   bool _isLoading = false;
 
   @override
@@ -593,23 +595,47 @@ class _CandidatesTabState extends State<_CandidatesTab> {
     });
   }
 
+  // Update this method in your _CandidatesTabState class
   Future<void> _loadApplications(int jobId) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final jobService = Provider.of<JobService>(context, listen: false);
-      final applications = await jobService.getJobApplications(jobId);
+      print('Loading applications for job ID: $jobId');
+
+      // Use the simplified query to get all applications
+      final supabaseService = SupabaseService();
+      final applicationsList = await supabaseService.getJobApplicationsWithProfiles(jobId);
+
+      print('Received ${applicationsList.length} applications');
+
+      if (applicationsList.isEmpty) {
+        // Try the fallback method directly
+        print('No applications found, trying fallback method');
+        //_loadApplicationsFallback(jobId);
+        return;
+      }
+
+      // Convert to ApplicationModel objects
+      final List<ApplicationModel> processedApplications = [];
+      for (var item in applicationsList) {
+        try {
+          final app = ApplicationModel.fromJson(item);
+          processedApplications.add(app);
+        } catch (e) {
+          print('Error converting application data: $e');
+        }
+      }
 
       setState(() {
-        _applications = applications;
+        _applications = processedApplications;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      print('Error loading applications: $e');
+      // Fallback to the basic method if the first method fails
+      //_loadApplicationsFallback(jobId);
     }
   }
 
@@ -751,6 +777,15 @@ class _CandidatesTabState extends State<_CandidatesTab> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                // Applications count
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    '${_applications.length} application(s) found',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 // Applications list
                 Expanded(
                   child: _applications.isEmpty
@@ -780,6 +815,17 @@ class _CandidatesTabState extends State<_CandidatesTab> {
                     itemCount: _applications.length,
                     itemBuilder: (context, index) {
                       final application = _applications[index];
+
+                      // Use cached user data if available
+                      final cachedUser = _applicantCache[application.applicantId];
+                      if (cachedUser != null) {
+                        return _buildApplicationCard(
+                          application,
+                          cachedUser,
+                        );
+                      }
+
+                      // Otherwise use the original implementation with FutureBuilder
                       return _ApplicationCard(
                         application: application,
                         onUpdateStatus: _updateApplicationStatus,
@@ -794,8 +840,156 @@ class _CandidatesTabState extends State<_CandidatesTab> {
       ),
     );
   }
-}
 
+  // Helper method to build an application card with pre-loaded user data
+  Widget _buildApplicationCard(ApplicationModel application, UserModel user) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Text(
+                    user.name.isNotEmpty
+                        ? user.name.substring(0, 1).toUpperCase()
+                        : '?',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(user.email),
+                      if (user.phone.isNotEmpty)
+                        Text(user.phone),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: Colors.grey[600],
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Applied: ${application.dateApplied != null ? DateFormat('MMM dd, yyyy').format(application.dateApplied!) : 'Unknown'}',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Status: '),
+                const SizedBox(width: 8),
+                Chip(
+                  label: Text(application.applicationStatus),
+                  backgroundColor: _getStatusColor(application.applicationStatus).withOpacity(0.1),
+                  labelStyle: TextStyle(
+                    color: _getStatusColor(application.applicationStatus),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // View CV button (would link to actual CV)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.description, size: 16),
+                  label: const Text('View CV'),
+                  onPressed: () {
+                    // Open CV viewer
+                  },
+                ),
+                const SizedBox(width: 8),
+
+                // Status update dropdown
+                PopupMenuButton<String>(
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'Pending',
+                      child: Text('Mark as Pending'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'Selected',
+                      child: Text('Mark as Selected'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'Rejected',
+                      child: Text('Mark as Rejected'),
+                    ),
+                  ],
+                  onSelected: (status) {
+                    _updateApplicationStatus(application.id!, status);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text(
+                          'Update Status',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to get color for status
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Pending':
+        return Colors.orange;
+      case 'Selected':
+        return Colors.green;
+      case 'Rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+}
 // Application card
 class _ApplicationCard extends StatelessWidget {
   final ApplicationModel application;
@@ -824,13 +1018,15 @@ class _ApplicationCard extends StatelessWidget {
               );
             }
 
-            if (!snapshot.hasData) {
-              return const ListTile(
-                title: Text('Applicant information unavailable'),
-              );
-            }
-
-            final applicant = snapshot.data!;
+            // Create a fallback user if data isn't available
+            final applicant = snapshot.data ?? UserModel(
+              id: application.applicantId,
+              name: 'Applicant (ID: ${application.applicantId.substring(0, 6)}...)',
+              email: 'Email not available',
+              phone: '',
+              roleId: 1, // Assume job seeker
+              profileStatus: 'Active',
+            );
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -293,23 +293,39 @@ class JobService extends ChangeNotifier {
   }
 
   // Get applications for a job
+  // Update this method in your JobService class
   Future<List<ApplicationModel>> getJobApplications(int jobId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      print('JobService: Fetching applications for job ID: $jobId');
+
+      // Use a simpler, more direct query
       final response = await _supabaseClient
           .from('applications')
           .select()
-          .eq('job_id', jobId)
-          .order('date_applied', ascending: false);
+          .eq('job_id', jobId);
 
-      final applications = (response as List).map((app) => ApplicationModel.fromJson(app)).toList();
-      _isLoading = false;
-      notifyListeners();
-      return applications;
+      print('JobService: Raw response: $response');
+      print('JobService: Response type: ${response.runtimeType}');
+      print('JobService: Response length: ${response.length}');
+
+      if (response is List) {
+        final applications = response.map((app) => ApplicationModel.fromJson(app)).toList();
+        print('JobService: Parsed ${applications.length} applications');
+        _isLoading = false;
+        notifyListeners();
+        return applications;
+      } else {
+        print('JobService: Unexpected response format');
+        _isLoading = false;
+        notifyListeners();
+        return [];
+      }
     } catch (e) {
+      print('JobService: Error getting applications: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
