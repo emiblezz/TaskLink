@@ -3,6 +3,11 @@ plugins {
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 }
+configurations {
+    all {
+        exclude(group = "com.aboutyou.dart_packages", module = "sign_in_with_apple")
+    }
+}
 
 android {
     namespace = "com.example.tasklink"
@@ -36,6 +41,7 @@ android {
         }
     }
 }
+
 
 flutter {
     source = "../.."

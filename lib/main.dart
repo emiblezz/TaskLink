@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// Use specific imports to avoid naming conflicts
+import 'package:provider/provider.dart' hide Provider;
+import 'package:provider/provider.dart' as provider_pkg show Provider;
 import 'package:tasklink/config/app_config.dart';
 import 'package:tasklink/screens/auth/splash_screen.dart';
+import 'package:tasklink/services/ai_services.dart';
 import 'package:tasklink/services/analytics_service.dart';
 import 'package:tasklink/services/auth_service.dart';
 import 'package:tasklink/services/job_service.dart';
@@ -11,6 +14,7 @@ import 'package:tasklink/services/ranking_service.dart';
 import 'package:tasklink/services/search_service.dart';
 import 'package:tasklink/utils/deep_link_handler.dart';
 import 'package:tasklink/utils/theme.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -31,12 +35,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Create AIService instance
+    final aiService = AIService(baseUrl: AppConfig.backendUrl);
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => NotificationService()),
         ChangeNotifierProvider(create: (_) => ProfileService()),
-        ChangeNotifierProvider(create: (_) => RankingService()),
+        // Updated RankingService provider using specific namespace
+        provider_pkg.Provider<RankingService>(
+          create: (_) => RankingService(
+            supabaseClient: Supabase.instance.client,
+            aiService: aiService,
+          ),
+        ),
         ChangeNotifierProvider(create: (_) => SearchService()),
         ChangeNotifierProvider(create: (_) => AnalyticsService()),
         // JobService needs access to AuthService and NotificationService

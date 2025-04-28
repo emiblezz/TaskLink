@@ -45,18 +45,6 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>CFBundleURLTypes</key>
-    <array>
-      <dict>
-        <key>CFBundleTypeRole</key>
-        <string>Editor</string>
-        <key>CFBundleURLName</key>
-        <string>io.supabase.tasklink</string>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>io.supabase.tasklink</string>
-        </array>
-      </dict>
-    </array>
+
 </dict>
 </plist>

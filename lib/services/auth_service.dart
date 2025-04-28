@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase/supabase.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:gotrue/gotrue.dart';
 import 'package:tasklink/config/app_config.dart';
 import 'package:tasklink/models/user_model.dart';
 import 'package:tasklink/services/supabase_service.dart';
 import 'package:tasklink/utils/constants.dart';
-import 'package:gotrue/gotrue.dart';
 
 class AuthService extends ChangeNotifier {
   final SupabaseClient _supabaseClient = AppConfig().supabaseClient;
@@ -39,6 +38,7 @@ class AuthService extends ChangeNotifier {
     _saveRememberMePreference(value);
     notifyListeners();
   }
+
   Future<void> _loadRememberMePreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -48,6 +48,7 @@ class AuthService extends ChangeNotifier {
       debugPrint('Error loading remember me preference: $e');
     }
   }
+
   Future<void> _saveRememberMePreference(bool value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -56,6 +57,7 @@ class AuthService extends ChangeNotifier {
       debugPrint('Error saving remember me preference: $e');
     }
   }
+
   // Initialize and check if user is already logged in
   Future<void> initialize() async {
     _isLoading = true;
@@ -275,6 +277,7 @@ class AuthService extends ChangeNotifier {
       return false;
     }
   }
+
   Future<bool> completePasswordReset(String newPassword) async {
     _isLoading = true;
     _errorMessage = null;
@@ -309,6 +312,7 @@ class AuthService extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
   String _getReadableErrorMessage(String error) {
     if (error.contains('email not found')) {
       return 'This email is not registered in our system.';

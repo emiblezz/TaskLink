@@ -11,9 +11,11 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.6
   supabase: ^1.11.11
+  supabase_flutter: ^1.10.25
+  sign_in_with_apple: ^5.0.0
   gotrue: ^1.12.6
   provider: ^6.1.1
-  file_picker: ^10.1.2  # Updated to latest version as suggested
+  file_picker: ^10.1.2
   path_provider: ^2.1.1
   intl: ^0.19.0
   flutter_dotenv: ^5.1.0
@@ -29,8 +31,11 @@ dependencies:
   share_plus: ^7.2.1
   app_links: ^3.4.1
   url_launcher: ^6.1.11
+  # Added for HTTP requests to backend
+  http: ^1.1.0
+  # Added for path manipulation
+  path: ^1.8.3
 
-dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0

@@ -1,11 +1,12 @@
-import 'package:supabase/supabase.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tasklink/config/app_config.dart';
 import 'package:tasklink/models/user_model.dart';
 import 'package:tasklink/models/role_model.dart';
 import 'package:tasklink/models/jobseeker_profile_model.dart';
 
 class SupabaseService {
-  final SupabaseClient _supabaseClient = AppConfig().supabaseClient;
+  // Use Supabase.instance.client instead of AppConfig().supabaseClient
+  final SupabaseClient _supabaseClient = Supabase.instance.client;
 
   // Getter for external access if needed
   SupabaseClient get supabase => _supabaseClient;
@@ -154,6 +155,7 @@ class SupabaseService {
       return false;
     }
   }
+
   // Add this method to your SupabaseService class
   Future<List<Map<String, dynamic>>> getJobApplicationsWithProfiles(int jobId) async {
     try {
@@ -183,6 +185,5 @@ class SupabaseService {
     }
   }
 
-  // Get job applications with user profiles - Improved version with join
-
+// Get job applications with user profiles - Improved version with join
 }
